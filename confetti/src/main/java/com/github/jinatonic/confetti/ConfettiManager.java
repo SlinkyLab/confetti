@@ -491,6 +491,53 @@ public class ConfettiManager {
         return this;
     }
 
+
+    public ConfettiManager animateWithInitialDisplay() {
+        if (this.ttl > 0) {
+            animate((int)this.ttl/3);
+        } else {
+            animate(0);
+        }
+        return this;
+    }
+
+    public ValueAnimator getAnimator() {
+        return this.animator;
+    }
+
+    private void animate(final int startTime) {
+        if (animationListener != null) {
+            animationListener.onAnimationStart(this);
+        }
+        cleanupExistingAnimation();
+        attachConfettiViewToParent();
+        addNewConfetti(numInitialCount, 0);
+        int tickInterval = 1000;
+        int tickTimes = startTime / tickInterval;
+        for (int i=0; i<tickTimes; i++){
+            processNewEmission(startTime/(tickTimes-i));
+            updateConfetti(startTime/(tickTimes-i));
+        }
+        lastEmittedTimestamp = startTime;
+        animator = ValueAnimator.ofInt(0)
+                .setDuration(Long.MAX_VALUE);
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                final long elapsedTime = valueAnimator.getCurrentPlayTime() + startTime;
+                processNewEmission(elapsedTime);
+                updateConfetti(elapsedTime);
+
+                if (confetti.size() == 0 && elapsedTime >= emissionDuration) {
+                    terminate();
+                } else {
+                    confettiView.invalidate();
+                }
+            }
+        });
+        animator.start();
+    }
+
     /**
      * Terminate the currently running animation if there is any.
      */
